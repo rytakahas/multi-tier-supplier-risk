@@ -1,0 +1,45 @@
+# --- Data / large files ---
+**/*.csv
+**/*.parquet
+**/*.jsonl
+**/*.ndjson
+**/*.avro
+**/*.orc
+**/*.feather
+
+# If you want to keep small sample CSVs tracked, use this instead:
+# data/**/*
+# !data/raw/README.md
+# !data/raw/small_sample.csv
+
+# --- KG artifacts ---
+data/kg/
+**/*.ttl
+**/*.nt
+**/*.rdf
+**/*.owl
+
+# --- dbt artifacts ---
+dbt_packages/
+target/
+logs/
+*.log
+
+# --- Airflow / Astro local state ---
+.airflow/
+.astro/
+__pycache__/
+*.pyc
+
+# --- Python env ---
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# --- OS/editor ---
+.DS_Store
+.vscode/
+.idea/
+

@@ -8,4 +8,4 @@ supplychain_bq:
       dataset: "{{ env_var('BQ_WH_DATASET') }}"
       threads: 4
       timeout_seconds: 300
-      location: EU
+      location: europe-west1

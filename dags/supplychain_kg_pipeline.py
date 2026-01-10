@@ -13,28 +13,53 @@ INCLUDE = "/usr/local/airflow/include"
 RAW_DIR = f"{INCLUDE}/data/raw"
 DBT_DIR = f"{INCLUDE}/dbt_supplychain"
 DBT_PROFILES_DIR = f"{DBT_DIR}/profiles"
-BQ_LOADER = f"{INCLUDE}/scripts/bq_load_raw.py"
 
+BQ_LOADER = f"{INCLUDE}/scripts/bq_load_raw.py"
 KG_EXPORTER = f"{INCLUDE}/kg/export/export_supplychain_kg.py"
 KG_LOADER = f"{INCLUDE}/kg/load/load_fuseki.py"
 
 TTL_OUT = os.environ.get("TTL_OUT", f"{INCLUDE}/data/kg/supplychain.ttl")
 DBT_BIN = os.environ.get("DBT_BIN", "/usr/local/airflow/dbt_venv/bin/dbt")
 
+# Fuseki (inside docker network)
+FUSEKI_URL = os.environ.get("FUSEKI_URL", "http://fuseki:3030")
+FUSEKI_DATASET = os.environ.get("FUSEKI_DATASET", "sc")
+
+
+def _run_and_log(cmd: list[str]) -> None:
+    """Run a subprocess and always print stdout/stderr into Airflow logs."""
+    import subprocess
+
+    p = subprocess.run(cmd, text=True, capture_output=True)
+    if p.stdout:
+        print(p.stdout)
+    if p.stderr:
+        print(p.stderr)
+    p.check_returncode()
+
 
 def _bq_load_raw():
-    import subprocess
-    subprocess.check_call(["python", BQ_LOADER, "--raw-dir", RAW_DIR])
+    _run_and_log(["python", "-u", BQ_LOADER, "--raw-dir", RAW_DIR])
 
 
 def _export_rdf():
-    import subprocess
-    subprocess.check_call(["python", KG_EXPORTER, "--out", TTL_OUT])
+    _run_and_log(["python", "-u", KG_EXPORTER, "--out", TTL_OUT])
 
 
 def _load_fuseki():
-    import subprocess
-    subprocess.check_call(["python", KG_LOADER, "--ttl", TTL_OUT])
+    _run_and_log(
+        [
+            "python",
+            "-u",
+            KG_LOADER,
+            "--fuseki-url",
+            FUSEKI_URL,
+            "--dataset",
+            FUSEKI_DATASET,
+            "--ttl",
+            TTL_OUT,
+        ]
+    )
 
 
 with DAG(

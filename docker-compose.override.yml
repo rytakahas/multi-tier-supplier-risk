@@ -1,22 +1,25 @@
-version: "3.8"
+# docker-compose.override.yml
 
 services:
   scheduler:
-    env_file: .env
+    env_file:
+      - .env
     environment:
       - CLOUDSDK_CONFIG=/usr/local/airflow/.config/gcloud
     volumes:
       - ${HOME}/.config/gcloud:/usr/local/airflow/.config/gcloud:ro
 
   webserver:
-    env_file: .env
+    env_file:
+      - .env
     environment:
       - CLOUDSDK_CONFIG=/usr/local/airflow/.config/gcloud
     volumes:
       - ${HOME}/.config/gcloud:/usr/local/airflow/.config/gcloud:ro
 
   triggerer:
-    env_file: .env
+    env_file:
+      - .env
     environment:
       - CLOUDSDK_CONFIG=/usr/local/airflow/.config/gcloud
     volumes:
@@ -38,30 +41,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    networks:
-      - airflow
 
   graphrag_api:
-    build:
-      context: .
-      dockerfile: docker/graphrag/Dockerfile
+    image: sc_graphrag_api:latest
     container_name: sc_graphrag_api
-    env_file: .env
+    env_file:
+      - .env
     environment:
       - SPARQL_ENDPOINT=http://fuseki:3030/sc/sparql
-      - HF_MODEL_NAME=${HF_MODEL_NAME}
-      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - HF_MODEL_NAME=${HF_MODEL_NAME:-google/flan-t5-base}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
     ports:
       - "8000:8000"
     depends_on:
       fuseki:
         condition: service_healthy
-    networks:
-      - airflow
 
 volumes:
   fuseki_data:
-
-networks:
-  airflow:
-    external: true
