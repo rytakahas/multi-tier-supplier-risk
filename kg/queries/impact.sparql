@@ -1,0 +1,20 @@
+PREFIX scr: <https://example.org/supplychain/kg#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Given a supplier label, list impacted products + regions
+# (Run this query in Fuseki UI; replace "Astra Components")
+SELECT DISTINCT ?productLabel ?regionLabel WHERE {
+  ?s a scr:Supplier ; rdfs:label "Astra Components" .
+
+  # products via multi-tier dependencies:
+  ?s scr:supplies ?part .
+  ?part (scr:subcomponentOf)* ?basePart .
+  ?basePart scr:usedIn ?product .
+  ?product rdfs:label ?productLabel .
+
+  # regions via facilities
+  ?s scr:deliversTo ?facility .
+  ?facility scr:locatedIn ?region .
+  ?region rdfs:label ?regionLabel .
+}
+ORDER BY ?productLabel ?regionLabel

@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "{{ env_var('BQ_RAW_PROJECT') }}"
+    schema: "{{ env_var('BQ_RAW_DATASET') }}"
+    tables:
+      - name: suppliers
+      - name: regions
+      - name: facilities
+      - name: products
+      - name: parts
+      - name: part_subcomponents
+      - name: product_components
+      - name: supplier_parts
+      - name: supplier_facilities
+      - name: shipments
+      - name: disruptions

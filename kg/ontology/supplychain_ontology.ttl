@@ -1,0 +1,34 @@
+@prefix scr: <https://example.org/supplychain/kg#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+scr: a owl:Ontology ;
+  rdfs:label "Supply Chain Risk KG Ontology" .
+
+# Classes
+scr:Supplier a owl:Class ; rdfs:label "Supplier" .
+scr:Part a owl:Class ; rdfs:label "Part" .
+scr:Product a owl:Class ; rdfs:label "Product" .
+scr:Facility a owl:Class ; rdfs:label "Facility" .
+scr:Region a owl:Class ; rdfs:label "Region" .
+scr:Disruption a owl:Class ; rdfs:label "Disruption event" .
+
+# Object properties
+scr:supplies a owl:ObjectProperty ; rdfs:label "supplies" ;
+  rdfs:domain scr:Supplier ; rdfs:range scr:Part .
+
+scr:usedIn a owl:ObjectProperty ; rdfs:label "used in product" ;
+  rdfs:domain scr:Part ; rdfs:range scr:Product .
+
+scr:subcomponentOf a owl:ObjectProperty ; rdfs:label "subcomponent of" ;
+  rdfs:domain scr:Part ; rdfs:range scr:Part .
+
+scr:deliversTo a owl:ObjectProperty ; rdfs:label "delivers to facility" ;
+  rdfs:domain scr:Supplier ; rdfs:range scr:Facility .
+
+scr:locatedIn a owl:ObjectProperty ; rdfs:label "located in region" ;
+  rdfs:domain scr:Facility ; rdfs:range scr:Region .
+
+scr:hasDisruption a owl:ObjectProperty ; rdfs:label "has disruption" ;
+  rdfs:domain scr:Supplier ; rdfs:range scr:Disruption .

@@ -1,0 +1,11 @@
+supplychain_bq:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('BQ_WH_PROJECT') }}"
+      dataset: "{{ env_var('BQ_WH_DATASET') }}"
+      threads: 4
+      timeout_seconds: 300
+      location: EU

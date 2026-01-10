@@ -1,0 +1,5 @@
+facility_id,facility_name,facility_type,region_id
+F001,Barcelona Plant,PLANT,R_ES_CAT
+F002,Madrid DC,DC,R_ES_MAD
+F003,Paris DC,DC,R_FR_IDF
+F004,Berlin Plant,PLANT,R_DE_BE

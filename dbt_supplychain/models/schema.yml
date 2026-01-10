@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: dim_supplier
+    columns:
+      - name: supplier_key
+        tests: [unique, not_null]
+
+  - name: dim_part
+    columns:
+      - name: part_key
+        tests: [unique, not_null]
+
+  - name: dim_product
+    columns:
+      - name: product_key
+        tests: [unique, not_null]
+
+  - name: dim_facility
+    columns:
+      - name: facility_key
+        tests: [unique, not_null]
+
+  - name: dim_region
+    columns:
+      - name: region_key
+        tests: [unique, not_null]

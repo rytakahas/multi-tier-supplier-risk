@@ -1,0 +1,9 @@
+part_id,part_name,criticality
+C10,Heating Coil,HIGH
+C20,Control Board,HIGH
+C30,Plastic Housing,MEDIUM
+C21,Microcontroller,HIGH
+C22,Capacitor Pack,MEDIUM
+C11,Copper Wire,HIGH
+C12,Nickel Sleeve,MEDIUM
+C31,Polymer Resin,MEDIUM
