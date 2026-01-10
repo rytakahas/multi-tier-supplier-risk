@@ -1,0 +1,6 @@
+product_id,part_id,qty
+P100,C10,1
+P100,C20,1
+P100,C30,1
+P200,C20,1
+P200,C30,2

@@ -1,0 +1,18 @@
+name: "dbt_supplychain"
+version: "1.0.0"
+config-version: 2
+
+profile: "supplychain_bq"
+
+model-paths: ["models"]
+analysis-paths: ["analysis"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+models:
+  dbt_supplychain:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

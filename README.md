@@ -1,4 +1,4 @@
-# multi-tier-supplier-risk-graphrag
+## multi-tier-supplier-risk-graphrag
 
 An end-to-end **Supply Chain Risk / Provenance** reference pipeline that starts from a **Data Lake (BigQuery raw)**,
 builds a **DWH (BigQuery + dbt star schema)**, branches into an **RDF Knowledge Graph (Fuseki SPARQL)**,
@@ -14,7 +14,7 @@ This repo is designed for your setup:
 
 ---
 
-## Architecture
+### Architecture
 
 ```
 Sources → BigQuery Raw (DL) → dbt (staging/marts) → BigQuery DWH (Gold)
@@ -23,7 +23,7 @@ Sources → BigQuery Raw (DL) → dbt (staging/marts) → BigQuery DWH (Gold)
 Fuseki/Neo4j subgraph retrieval → LLM summarization (Hugging Face) → GraphRAG API
 ```
 
-### Why DWH first?
+#### Why DWH first?
 Most businesses keep metrics + reporting in the DWH. The KG is a **derived semantic layer** that is rebuilt from marts.
 This repo treats:
 - **DWH = system of record**
@@ -31,7 +31,7 @@ This repo treats:
 
 ---
 
-## Repo layout
+### Repo layout
 
 ```
 multi-tier-supplier-risk-graphrag/
@@ -65,9 +65,9 @@ multi-tier-supplier-risk-graphrag/
 
 ---
 
-## Datasets and tables
+### Datasets and tables
 
-### Raw (Data Lake) tables (load these CSVs into `ryoji_raw_demos`)
+#### Raw (Data Lake) tables (load these CSVs into `ryoji_raw_demos`)
 - `suppliers`
 - `regions`
 - `facilities`
@@ -80,7 +80,7 @@ multi-tier-supplier-risk-graphrag/
 - `shipments` (operational shipments, lead time, status)
 - `disruptions` (events: fire/port congestion/etc.)
 
-### DWH (star schema) in `ryoji_wh_demos`
+#### DWH (star schema) in `ryoji_wh_demos`
 **Dimensions**
 - `dim_supplier`
 - `dim_part`
@@ -96,9 +96,9 @@ multi-tier-supplier-risk-graphrag/
 
 ---
 
-## Quick start (Docker-only)
+### Quick start (Docker-only)
 
-### 0) Prereqs (host)
+#### 0) Prereqs (host)
 You only need:
 - Docker + Docker Compose
 - `gcloud` authenticated for BigQuery (ADC)
@@ -106,7 +106,7 @@ You only need:
 
 > We mount your `~/.config/gcloud` into containers so Python/dbt can access BigQuery via ADC.
 
-### 1) Configure env
+#### 1) Configure env
 Copy the example env file:
 
 ```bash
@@ -119,7 +119,7 @@ Edit `.env` to match:
 - `BQ_WH_PROJECT=able-balm-454718-n8`
 - `BQ_WH_DATASET=ryoji_wh_demos`
 
-### 2) Start services
+#### 2) Start services
 This brings up:
 - Airflow (with dbt)
 - Fuseki (SPARQL GraphDB)
@@ -133,7 +133,7 @@ Airflow UI: http://localhost:8080
 Fuseki UI: http://localhost:3030  
 GraphRAG API: http://localhost:8000/docs
 
-### 3) Run the pipeline
+#### 3) Run the pipeline
 In Airflow:
 - enable DAG: `supplychain_kg_pipeline`
 - trigger run
@@ -146,9 +146,9 @@ What it does:
 
 ---
 
-## GraphRAG usage (example)
+### GraphRAG usage (example)
 
-### Ask: supplier impact
+#### Ask: supplier impact
 Once the DAG ran, call:
 
 ```bash
@@ -163,7 +163,7 @@ You’ll get:
 
 ---
 
-## Modeling in the KG (thumb rules)
+### Modeling in the KG (thumb rules)
 
 - **Entities with stable IDs** become **nodes**: Supplier, Part, Product, Facility, Region, DisruptionEvent
 - **Relationships** become predicates: supplies, usedIn, subcomponentOf, deliversTo, locatedIn
@@ -173,7 +173,7 @@ You’ll get:
 
 ---
 
-## Notes on Hugging Face model choice
+### Notes on Hugging Face model choice
 
 Default is a small CPU-friendly summarizer:
 - `google/flan-t5-base`
@@ -184,7 +184,7 @@ Optionally set `HUGGINGFACE_TOKEN` if you hit rate limits.
 
 ---
 
-## What to build next (production hardening)
+### What to build next (production hardening)
 - SHACL validation on the exported TTL
 - incremental graph updates (partition by date)
 - entity resolution (supplier name normalization)
@@ -192,5 +192,33 @@ Optionally set `HUGGINGFACE_TOKEN` if you hit rate limits.
 
 ---
 
-## License
+### License
 MIT
+
+
+---
+
+### Run with Astro CLI (`astro dev start`)
+
+#### 0) Authenticate BigQuery ADC on your host
+```bash
+gcloud auth application-default login
+```
+
+#### 1) Start Airflow + extra services
+```bash
+astro dev start
+```
+
+Astro starts Airflow. `docker-compose.override.yml` adds:
+- Fuseki (SPARQL GraphDB)
+- GraphRAG API
+
+#### 2) Trigger the DAG
+The DAG is manual (`schedule=None`):
+- Airflow UI → DAG `supplychain_kg_pipeline` → Trigger DAG
+
+#### 3) Ask GraphRAG
+```bash
+curl -X POST http://localhost:8000/impact   -H "Content-Type: application/json"   -d '{"supplier_name":"Astra Components"}'
+```

@@ -1,0 +1,3 @@
+disruption_id,supplier_id,start_date,end_date,disruption_type,severity
+D001,S001,2025-12-01,2025-12-20,FIRE,0.9
+D002,S005,2025-12-05,2025-12-15,PORT_CONGESTION,0.6

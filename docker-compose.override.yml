@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  scheduler:
+    env_file: .env
+    environment:
+      - CLOUDSDK_CONFIG=/usr/local/airflow/.config/gcloud
+    volumes:
+      - ${HOME}/.config/gcloud:/usr/local/airflow/.config/gcloud:ro
+
+  webserver:
+    env_file: .env
+    environment:
+      - CLOUDSDK_CONFIG=/usr/local/airflow/.config/gcloud
+    volumes:
+      - ${HOME}/.config/gcloud:/usr/local/airflow/.config/gcloud:ro
+
+  triggerer:
+    env_file: .env
+    environment:
+      - CLOUDSDK_CONFIG=/usr/local/airflow/.config/gcloud
+    volumes:
+      - ${HOME}/.config/gcloud:/usr/local/airflow/.config/gcloud:ro
+
+  fuseki:
+    image: stain/jena-fuseki:5.1.0
+    container_name: sc_fuseki
+    environment:
+      - ADMIN_PASSWORD=admin
+      - TDB=2
+      - FUSEKI_DATASET_1=sc
+    ports:
+      - "3030:3030"
+    volumes:
+      - fuseki_data:/fuseki
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3030/$/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - airflow
+
+  graphrag_api:
+    build:
+      context: .
+      dockerfile: docker/graphrag/Dockerfile
+    container_name: sc_graphrag_api
+    env_file: .env
+    environment:
+      - SPARQL_ENDPOINT=http://fuseki:3030/sc/sparql
+      - HF_MODEL_NAME=${HF_MODEL_NAME}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+    ports:
+      - "8000:8000"
+    depends_on:
+      fuseki:
+        condition: service_healthy
+    networks:
+      - airflow
+
+volumes:
+  fuseki_data:
+
+networks:
+  airflow:
+    external: true

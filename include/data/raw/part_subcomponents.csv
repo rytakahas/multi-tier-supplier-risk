@@ -1,0 +1,7 @@
+parent_part_id,child_part_id,qty
+C10,C11,2
+C10,C12,1
+C20,C21,1
+C20,C22,3
+C30,C31,5
+C21,C31,1
