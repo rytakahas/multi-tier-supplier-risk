@@ -128,7 +128,7 @@ def _llm_summarize(model_name: str, token: Optional[str], supplier_name: str, ev
         tokenizer=model_name,
         token=token,
     )
-    out = gen(prompt, max_length=512, do_sample=False)
+    out = gen(prompt, max_length=1024, do_sample=False)
     return out[0]["generated_text"]
 
 
