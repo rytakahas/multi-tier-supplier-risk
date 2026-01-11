@@ -47,19 +47,18 @@ def _export_rdf():
 
 
 def _load_fuseki():
-    _run_and_log(
-        [
-            "python",
-            "-u",
-            KG_LOADER,
-            "--fuseki-url",
-            FUSEKI_URL,
-            "--dataset",
-            FUSEKI_DATASET,
-            "--ttl",
-            TTL_OUT,
-        ]
-    )
+    import subprocess, os
+    ttl_out = os.environ.get("TTL_OUT", "/usr/local/airflow/include/data/kg/supplychain.ttl")
+    fuseki_url = os.environ.get("FUSEKI_URL", "http://host.docker.internal:3030")
+    dataset = os.environ.get("FUSEKI_DATASET", "sc")
+
+    subprocess.check_call([
+        "python", "-u", "/usr/local/airflow/include/kg/load/load_fuseki.py",
+        "--fuseki-url", fuseki_url,
+        "--dataset", dataset,
+        "--ttl", ttl_out
+    ])
+
 
 
 with DAG(
