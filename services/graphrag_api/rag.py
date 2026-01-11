@@ -1,6 +1,6 @@
 import json
 import textwrap
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from SPARQLWrapper import SPARQLWrapper, JSON
 from transformers import pipeline
@@ -9,14 +9,23 @@ from transformers import pipeline
 PREFIXES = """
 PREFIX scr: <https://example.org/supplychain/kg#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-"""
+""".strip()
 
 
 def _sparql_select(endpoint: str, query: str) -> List[Dict[str, Any]]:
     sp = SPARQLWrapper(endpoint)
     sp.setQuery(query)
     sp.setReturnFormat(JSON)
-    res = sp.query().convert()
+
+    # Some SPARQLWrapper builds may not have setTimeout; keep safe.
+    if hasattr(sp, "setTimeout"):
+        sp.setTimeout(30)
+
+    try:
+        res = sp.query().convert()
+    except Exception as e:
+        raise RuntimeError(f"SPARQL query failed against {endpoint}: {e}")
+
     return res.get("results", {}).get("bindings", [])
 
 
@@ -32,7 +41,13 @@ SELECT ?s WHERE {{
     return rows[0]["s"]["value"] if rows else None
 
 
-def _top_impacts(endpoint: str, supplier_uri: str, top_k_parts: int, top_k_products: int, top_k_regions: int):
+def _top_impacts(
+    endpoint: str,
+    supplier_uri: str,
+    top_k_parts: int,
+    top_k_products: int,
+    top_k_regions: int,
+):
     # Parts directly supplied
     q_parts = PREFIXES + f"""
 SELECT DISTINCT ?part ?partLabel WHERE {{
@@ -66,31 +81,29 @@ SELECT DISTINCT ?region ?regionLabel ?facility ?facilityLabel WHERE {{
     parts = _sparql_select(endpoint, q_parts)
     products = _sparql_select(endpoint, q_products)
     regions = _sparql_select(endpoint, q_regions)
-
     return parts, products, regions
 
 
 def _format_evidence(parts, products, regions) -> str:
+    def lbl(row, uri_key, label_key):
+        uri = row[uri_key]["value"]
+        return row.get(label_key, {}).get("value", uri.split("/")[-1])
+
     lines = []
     lines.append("EVIDENCE (triples-derived facts):")
     lines.append("- Directly supplied parts:")
     for r in parts:
-        part = r["part"]["value"]
-        label = r.get("partLabel", {}).get("value", part.split("/")[-1])
-        lines.append(f"  - {label} ({part})")
+        lines.append(f"  - {lbl(r, 'part', 'partLabel')}")
     lines.append("- Impacted products (multi-tier):")
     for r in products:
-        prod = r["product"]["value"]
-        prod_label = r.get("productLabel", {}).get("value", prod.split("/")[-1])
-        base = r["basePart"]["value"]
-        base_label = r.get("basePartLabel", {}).get("value", base.split("/")[-1])
-        lines.append(f"  - {prod_label} impacted via component {base_label}")
+        prod = lbl(r, "product", "productLabel")
+        base = lbl(r, "basePart", "basePartLabel")
+        lines.append(f"  - {prod} impacted via component {base}")
     lines.append("- Impacted regions (delivery footprint):")
     for r in regions:
-        reg = r["region"]["value"]
-        reg_label = r.get("regionLabel", {}).get("value", reg.split("/")[-1])
-        fac_label = r.get("facilityLabel", {}).get("value", r["facility"]["value"].split("/")[-1])
-        lines.append(f"  - {reg_label} (via {fac_label})")
+        reg = lbl(r, "region", "regionLabel")
+        fac = lbl(r, "facility", "facilityLabel")
+        lines.append(f"  - {reg} (via {fac})")
     return "\n".join(lines)
 
 
@@ -113,7 +126,6 @@ def _llm_summarize(model_name: str, token: Optional[str], supplier_name: str, ev
         "text2text-generation",
         model=model_name,
         tokenizer=model_name,
-        # For private models, token may be required; kept optional.
         token=token,
     )
     out = gen(prompt, max_length=512, do_sample=False)
@@ -130,38 +142,52 @@ def impact_analysis(
     hf_token: Optional[str],
 ) -> Dict[str, Any]:
     if not sparql_endpoint:
-        return {"error": "SPARQL_ENDPOINT env var not set"}
+        raise RuntimeError("SPARQL_ENDPOINT env var not set")
 
     supplier_uri = _get_supplier_uri(sparql_endpoint, supplier_name)
     if not supplier_uri:
-        return {"error": f"Supplier not found in KG: {supplier_name}", "hint": "Check exact label in suppliers.csv or KG load status."}
+        return {
+            "error": f"Supplier not found in KG: {supplier_name}",
+            "hint": "Check exact label in suppliers.csv or confirm KG load into Fuseki.",
+        }
 
-    parts, products, regions = _top_impacts(sparql_endpoint, supplier_uri, top_k_parts, top_k_products, top_k_regions)
+    parts, products, regions = _top_impacts(
+        sparql_endpoint, supplier_uri, top_k_parts, top_k_products, top_k_regions
+    )
 
     evidence = _format_evidence(parts, products, regions)
-    summary = _llm_summarize(hf_model, hf_token, supplier_name, evidence)
 
-    # Return also structured items
-    def _label(row, k_uri, k_label):
-        uri = row[k_uri]["value"]
-        return row.get(k_label, {}).get("value", uri.split("/")[-1])
+    # Make LLM optional: still return graph results even if HF fails
+    try:
+        summary = _llm_summarize(hf_model, hf_token, supplier_name, evidence)
+    except Exception as e:
+        summary = f"(LLM summarization failed: {e})"
+
+    def _label(row, uri_key, label_key):
+        uri = row[uri_key]["value"]
+        return row.get(label_key, {}).get("value", uri.split("/")[-1])
 
     return {
         "supplier": {"name": supplier_name, "uri": supplier_uri},
-        "impacted_parts": [{"uri": r["part"]["value"], "label": _label(r, "part", "partLabel")} for r in parts],
+        "impacted_parts": [
+            {"uri": r["part"]["value"], "label": _label(r, "part", "partLabel")}
+            for r in parts
+        ],
         "impacted_products": [
             {
                 "uri": r["product"]["value"],
                 "label": _label(r, "product", "productLabel"),
                 "via_component": _label(r, "basePart", "basePartLabel"),
-            } for r in products
+            }
+            for r in products
         ],
         "impacted_regions": [
             {
                 "uri": r["region"]["value"],
                 "label": _label(r, "region", "regionLabel"),
                 "via_facility": _label(r, "facility", "facilityLabel"),
-            } for r in regions
+            }
+            for r in regions
         ],
         "evidence": evidence,
         "llm_summary": summary,
