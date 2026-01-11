@@ -57,5 +57,17 @@ services:
       fuseki:
         condition: service_healthy
 
+  gemini_cli:
+    image: sc_gemini_cli:latest
+    container_name: sc_gemini_cli
+    env_file:
+      - .env
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./:/workspace
+    working_dir: /workspace
+    restart: unless-stopped
+
 volumes:
   fuseki_data:
